@@ -235,7 +235,60 @@
       }
     }
   }
+    
+  // ground
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(20,20),
+    new THREE.MeshStandardMaterial({ color: 0x2f3654, roughness:1 })
+  );
+  ground.rotation.x = -Math.PI / 2;
+  scene.add(ground);
 
+  // controls
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.target.set(0,1,0);
+  controls.update();
+
+ // ================ Mini Dungeon Floors & Walls ================
+const loader = new GLTFLoader();
+let floorGeo, floorMat, wallGeo, wallMat;
+
+(async () => {
+  const [floor, wall] = await Promise.all([
+    loadMeshParts("./mini_floor.glb"),
+    loadMeshParts("./mini_wall.glb")
+  ]);
+  floorGeo = floor.geometry; floorMat = floor.material;
+  wallGeo  = wall.geometry;  wallMat  = wall.material;
+
+  floorMat.metalness = 0; floorMat.roughness = 0.9;
+  wallMat.metalness = 0;  wallMat.roughness = 0.9;
+
+  buildDungeonInstanced();
+})();
+
+function buildDungeonInstanced(){
+  const floorPositions = [];
+  const wallPositions = [];
+  const y0 = 0;
+  const halfW = (MAP_W - 1) / 2;
+  const halfH = (MAP_H - 1) / 2;
+
+  for (let gy = 0; gy < MAP_H; gy++){
+    for (let gx = 0; gx < MAP_W; gx++){
+      const t = state.map[gy][gx];
+      const x = (gx - halfW) * TILE;
+      const z = (gy - halfH) * TILE;
+      if (t === 1) wallPositions.push({ x, y: y0, z });
+      else               floorPositions.push({ x, y: y0 - 0.01, z });
+    }
+  }
+
+  const fInst = buildInstanced(floorGeo, floorMat, floorPositions);
+  const wInst = buildInstanced(wallGeo, wallMat, wallPositions);
+  scene.add(fInst, wInst);
+}
+   
   // ---------- Game State ----------
   const state = { zone:1, gold:0, xp:0, lvl:1, player:null, enemies:[], items:[], map:generateMap(1) };
 
